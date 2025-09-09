@@ -1,296 +1,197 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gestion Questions Bibliques Avancée</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<style>
-  body{padding:20px;}
-  .tag-badge{margin-right:5px;}
-  .passage-exp{margin-bottom:3px;}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sujets & Réponses</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .subject-btn {
+      width: 100%;
+      text-align: left;
+      font-weight: bold;
+      border-left: 5px solid #0d6efd;
+    }
+    .tag-badge {
+      margin-left: 5px;
+    }
+    .qa-block {
+      background: #f8f9fa;
+      border-left: 3px solid #0d6efd;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+    }
+  </style>
 </head>
-<body>
+<body class="bg-light">
 
-<div class="container">
-  <h1 class="mb-4">Gestion Questions Bibliques Avancée</h1>
-  <div class="d-flex mb-3">
-    <button class="btn btn-primary me-2" id="newQuestionBtn">Nouvelle Question</button>
-    <select class="form-select w-auto me-2" id="tagFilter">
-      <option value="">Filtrer par tag</option>
-    </select>
-    <input type="text" id="searchInput" class="form-control w-auto" placeholder="Recherche...">
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0">Sujets & Réponses</h2>
+    <button id="addBtn" class="btn btn-success">➕ Ajouter</button>
   </div>
 
-  <div id="questionsList" class="list-group"></div>
-</div>
+  <!-- Recherche -->
+  <div class="mb-3">
+    <input type="text" id="searchInput" class="form-control" placeholder="Rechercher par sujet ou tag...">
+  </div>
 
-<!-- Modal -->
-<div class="modal fade" id="questionModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Question</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <input type="hidden" id="questionId">
-        <div class="mb-3">
-          <label>Question</label>
-          <textarea id="questionText" class="form-control"></textarea>
-        </div>
-        <div id="passagesContainer" class="mb-3">
-          <label>Passages & Explications</label>
-        </div>
-        <button class="btn btn-sm btn-secondary mb-3" id="addPassageBtn">+ Passage</button>
-        <div class="mb-3">
-          <label>Réponses (séparées par | )</label>
-          <input type="text" id="questionReponses" class="form-control">
-        </div>
-        <div class="mb-3">
-          <label>Tags (séparés par , )</label>
-          <input type="text" id="questionTags" class="form-control">
-        </div>
-        <div class="mb-3">
-          <label>Source</label>
-          <input type="text" id="questionSource" class="form-control">
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-        <button class="btn btn-primary" id="saveQuestionBtn">Enregistrer</button>
-      </div>
-    </div>
+  <!-- Liste des sujets -->
+  <div id="subjectList"></div>
+
+  <!-- Pagination -->
+  <div class="d-flex justify-content-between mt-3">
+    <button id="prevPage" class="btn btn-outline-primary">Précédent</button>
+    <span id="pageInfo" class="align-self-center"></span>
+    <button id="nextPage" class="btn btn-outline-primary">Suivant</button>
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycbw16vU3oy-YzhDFFAOmTzjdD4w4gdOLn3uS7C6mophbCZUkP93EYtqh96bXIrw8Hweq/exec";
-let questions = [];
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw16vU3oy-YzhDFFAOmTzjdD4w4gdOLn3uS7C6mophbCZUkP93EYtqh96bXIrw8Hweq/exec";
+const PASSWORD = "18132512";
 
-document.addEventListener("DOMContentLoaded",()=>{
-  loadQuestions();
-  document.getElementById("newQuestionBtn").addEventListener("click",()=>openModal());
-  document.getElementById("saveQuestionBtn").addEventListener("click",saveQuestion);
-  document.getElementById("addPassageBtn").addEventListener("click",addPassageField);
-  document.getElementById("searchInput").addEventListener("input",filterQuestions);
-  document.getElementById("tagFilter").addEventListener("change",filterQuestions);
+let allData = [];
+let groupedData = {};
+let subjects = [];
+let currentPage = 1;
+const pageSize = 10;
+
+// Charger les données
+async function loadData() {
+  const res = await fetch(SCRIPT_URL);
+  allData = await res.json();
+
+  // Grouper par sujet
+  groupedData = {};
+  allData.forEach(row => {
+    if (!groupedData[row.sujet]) {
+      groupedData[row.sujet] = { tags: row.tags, entries: [] };
+    }
+    groupedData[row.sujet].entries.push(row);
+  });
+
+  subjects = Object.keys(groupedData);
+  renderPage();
+}
+
+// Pagination
+function renderPage() {
+  const start = (currentPage - 1) * pageSize;
+  const end = start + pageSize;
+  const pageSubjects = subjects.slice(start, end);
+  renderSubjects(pageSubjects);
+  document.getElementById("pageInfo").innerText = `Page ${currentPage} / ${Math.ceil(subjects.length / pageSize)}`;
+
+  document.getElementById("prevPage").disabled = currentPage === 1;
+  document.getElementById("nextPage").disabled = currentPage === Math.ceil(subjects.length / pageSize);
+}
+
+// Afficher les sujets sous forme de boutons (accordéon)
+function renderSubjects(subjectList) {
+  const container = document.getElementById("subjectList");
+  container.innerHTML = "";
+
+  if (subjectList.length === 0) {
+    container.innerHTML = `<p class="text-center">Aucun résultat</p>`;
+    return;
+  }
+
+  subjectList.forEach(sujet => {
+    const tags = groupedData[sujet].tags
+      ? groupedData[sujet].tags.split(",").map(t => `<span class="badge bg-secondary tag-badge">${t.trim()}</span>`).join("")
+      : "";
+    const id = sujet.replace(/\s+/g, "_");
+
+    container.innerHTML += `
+      <div class="mb-3">
+        <button class="btn btn-outline-primary subject-btn" data-target="#collapse_${id}">
+          ${sujet} ${tags}
+        </button>
+        <div id="collapse_${id}" class="collapse mt-2">
+          ${renderQA(groupedData[sujet].entries)}
+        </div>
+      </div>
+    `;
+  });
+
+  // Accordéon : fermer les autres sujets
+  const buttons = container.querySelectorAll(".subject-btn");
+  buttons.forEach(btn => {
+    btn.addEventListener("click", function(){
+      const targetId = this.getAttribute("data-target");
+      const allCollapses = container.querySelectorAll(".collapse");
+
+      allCollapses.forEach(c => {
+        if("#"+c.id !== targetId){
+          c.classList.remove("show");
+        }
+      });
+
+      const target = document.querySelector(targetId);
+      target.classList.toggle("show");
+    });
+  });
+}
+
+// Générer questions/réponses
+function renderQA(entries) {
+  let html = "";
+  entries.forEach(row => {
+    for (let i = 1; i <= 5; i++) {
+      if (row[`question0${i}`]) {
+        html += `
+          <div class="qa-block">
+            <p><strong>${row[`question0${i}`]}</strong></p>
+            <p>${row[`reponse0${i}`] || ""}</p>
+          </div>
+        `;
+      }
+    }
+  });
+  return html;
+}
+
+// Recherche
+document.getElementById("searchInput").addEventListener("input", function() {
+  const term = this.value.toLowerCase();
+  subjects = Object.keys(groupedData).filter(sujet =>
+    sujet.toLowerCase().includes(term) ||
+    (groupedData[sujet].tags && groupedData[sujet].tags.toLowerCase().includes(term))
+  );
+  currentPage = 1;
+  renderPage();
 });
 
-// ---- Remplacer saveQuestion() par ceci ----
-async function saveQuestion(){
-  const saveBtn = document.getElementById("saveQuestionBtn");
-  const originalText = saveBtn.innerHTML;
-  saveBtn.disabled = true;
-  saveBtn.innerHTML = "Enregistrement...";
-
-  try {
-    // Nettoyage et collecte des champs
-    const passages = [...document.getElementsByClassName("passageInput")]
-      .map(i => i.value.trim()).filter(Boolean);
-    const explications = [...document.getElementsByClassName("explicationInput")]
-      .map(i => i.value.trim()).filter(Boolean);
-    const reponses = document.getElementById("questionReponses").value
-      .split("|").map(s => s.trim()).filter(Boolean);
-    const tags = document.getElementById("questionTags").value
-      .split(",").map(s => s.trim()).filter(Boolean);
-
-    const data = {
-      id: document.getElementById("questionId").value || null,
-      question: document.getElementById("questionText").value.trim(),
-      passages,
-      explications,
-      reponses,
-      tags,
-      source: document.getElementById("questionSource").value.trim()
-    };
-
-    // Vérification simple de configuration
-    if(!API_URL || API_URL.includes("VOTRE_URL")) {
-      alert("Erreur : remplacez API_URL par l'URL de votre Web App Apps Script (déployez le script et copiez l'URL /exec).");
-      throw new Error("API_URL non configuré");
-    }
-
-    const action = data.id ? "update" : "add";
-
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, data })
-    });
-
-    if(!res.ok) {
-      const txt = await res.text().catch(()=>"<no body>");
-      console.error("Réponse serveur non OK:", res.status, txt);
-      alert("Erreur serveur (voir console). Statut: " + res.status);
-      throw new Error("Server returned " + res.status);
-    }
-
-    const json = await res.json().catch(()=>({}));
-    console.log("Réponse save:", json);
-
-    // Recharger et fermer modal
-    await loadQuestions();
-    const modalEl = document.getElementById("questionModal");
-    const modalInst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-    modalInst.hide();
-
-  } catch (err) {
-    console.error("Erreur lors de saveQuestion:", err);
-    // pas d'alert intrusif après le check initial ; console contient les détails
-  } finally {
-    saveBtn.disabled = false;
-    saveBtn.innerHTML = originalText;
+// Pagination boutons
+document.getElementById("prevPage").addEventListener("click", () => {
+  if(currentPage > 1){
+    currentPage--;
+    renderPage();
   }
-}
-
-// ---- Remplacer loadQuestions() par ceci ----
-async function loadQuestions(){
-  try {
-    if(!API_URL || API_URL.includes("VOTRE_URL")) {
-      throw new Error("API_URL non configuré. Remplacez-le par l'URL /exec de votre Web App.");
-    }
-
-    const res = await fetch(API_URL);
-    if(!res.ok) {
-      const txt = await res.text().catch(()=>"<no body>");
-      console.error("Erreur loadQuestions - statut:", res.status, txt);
-      throw new Error("Erreur HTTP " + res.status);
-    }
-    const data = await res.json();
-    questions = (data || []).sort((a,b)=> new Date(b.date) - new Date(a.date));
-    renderQuestions(questions);
-    renderTagFilter();
-  } catch (err) {
-    console.error("Impossible de charger les questions:", err);
-    alert("Impossible de charger les questions (voir console). Vérifiez API_URL et le déploiement Apps Script.");
+});
+document.getElementById("nextPage").addEventListener("click", () => {
+  if(currentPage < Math.ceil(subjects.length / pageSize)){
+    currentPage++;
+    renderPage();
   }
-}
+});
 
-
-function renderQuestions(list){
-  const container = document.getElementById("questionsList");
-  container.innerHTML="";
-  list.forEach(q=>{
-    const div = document.createElement("div");
-    div.className="list-group-item";
-    div.innerHTML = `
-      <h5>${q.question}</h5>
-      <p>${q.passages.map((p,i)=>`<span class="passage-exp"><strong>${p}</strong>: ${q.explications[i]||""}</span>`).join("<br>")}</p>
-      <p><strong>Réponses:</strong> ${q.reponses.join(", ")}</p>
-      <p>${q.tags.map(t=>`<span class="badge bg-info tag-badge">${t}</span>`).join(" ")}</p>
-      <button class="btn btn-sm btn-primary me-1" onclick="editQuestion('${q.id}')">✏️</button>
-      <button class="btn btn-sm btn-danger me-1" onclick="deleteQuestion('${q.id}')">🗑️</button>
-      <button class="btn btn-sm btn-secondary me-1" onclick="copyQuestion('${q.id}')">📋</button>
-      <button class="btn btn-sm btn-warning" onclick="duplicateQuestion('${q.id}')">📄 Dupliquer</button>
-    `;
-    container.appendChild(div);
-  });
-}
-
-function renderTagFilter(){
-  const allTags = [...new Set(questions.flatMap(q=>q.tags))];
-  const select = document.getElementById("tagFilter");
-  select.innerHTML = `<option value="">Filtrer par tag</option>`+
-    allTags.map(t=>`<option value="${t}">${t}</option>`).join("");
-}
-
-function openModal(q=null){
-  const modal = new bootstrap.Modal(document.getElementById("questionModal"));
-  if(q){
-    document.getElementById("questionId").value=q.id;
-    document.getElementById("questionText").value=q.question;
-    document.getElementById("questionReponses").value=q.reponses.join("|");
-    document.getElementById("questionTags").value=q.tags.join(",");
-    document.getElementById("questionSource").value=q.source;
-    renderPassagesFields(q.passages,q.explications);
-  } else {
-    document.getElementById("questionId").value="";
-    document.getElementById("questionText").value="";
-    document.getElementById("questionReponses").value="";
-    document.getElementById("questionTags").value="";
-    document.getElementById("questionSource").value="";
-    renderPassagesFields();
+// Mot de passe pour formulaire
+document.getElementById("addBtn").addEventListener("click", function(){
+  const input = prompt("Entrer le mot de passe de 8 chiffres pour accéder au formulaire :");
+  if(input === PASSWORD){
+    window.location.href = "form.html";
+  } else if(input !== null) {
+    alert("Mot de passe incorrect ❌");
   }
-  modal.show();
-}
+});
 
-function renderPassagesFields(passages=[],explications=[]){
-  const container = document.getElementById("passagesContainer");
-  container.innerHTML="";
-  if(passages.length===0) passages=[""];
-  if(explications.length===0) explications=[""];
-  for(let i=0;i<passages.length;i++){
-    const div=document.createElement("div");
-    div.className="d-flex mb-2";
-    div.innerHTML=`
-      <input type="text" class="form-control me-1 passageInput" placeholder="Passage" value="${passages[i]}">
-      <input type="text" class="form-control me-1 explicationInput" placeholder="Explication" value="${explications[i]}">
-      <button class="btn btn-danger btn-sm" onclick="this.parentNode.remove()">🗑️</button>
-    `;
-    container.appendChild(div);
-  }
-}
-
-function addPassageField(){
-  const container=document.getElementById("passagesContainer");
-  const div=document.createElement("div");
-  div.className="d-flex mb-2";
-  div.innerHTML=`
-    <input type="text" class="form-control me-1 passageInput" placeholder="Passage">
-    <input type="text" class="form-control me-1 explicationInput" placeholder="Explication">
-    <button class="btn btn-danger btn-sm" onclick="this.parentNode.remove()">🗑️</button>
-  `;
-  container.appendChild(div);
-}
-
-
-
-function editQuestion(id){
-  const q=questions.find(q=>q.id===id);
-  openModal(q);
-}
-
-function deleteQuestion(id){
-  if(confirm("Voulez-vous vraiment supprimer cette question ?")){
-    fetch(API_URL,{
-      method:"POST",
-      body: JSON.stringify({action:"delete",data:{id}}),
-      headers: {"Content-Type":"application/json"}
-    }).then(res=>res.json()).then(()=>loadQuestions());
-  }
-}
-
-function copyQuestion(id){
-  const q=questions.find(q=>q.id===id);
-  let text=q.question+"\n"+q.passages.map((p,i)=>p+": "+q.explications[i]).join("\n")+
-    "\nRéponses: "+q.reponses.join(", ")+"\nTags: "+q.tags.join(", ");
-  navigator.clipboard.writeText(text);
-  alert("Copié dans le presse-papiers !");
-}
-
-function duplicateQuestion(id){
-  fetch(API_URL,{
-    method:"POST",
-    body: JSON.stringify({action:"duplicate",data:{id}}),
-    headers: {"Content-Type":"application/json"}
-  }).then(res=>res.json()).then(()=>loadQuestions());
-}
-
-function filterQuestions(){
-  const term=document.getElementById("searchInput").value.toLowerCase();
-  const tag=document.getElementById("tagFilter").value;
-  const filtered=questions.filter(q=>{
-    const textMatch=q.question.toLowerCase().includes(term)
-      || q.explications.join(" ").toLowerCase().includes(term)
-      || q.reponses.join(" ").toLowerCase().includes(term);
-    const tagMatch=tag?q.tags.includes(tag):true;
-    return textMatch && tagMatch;
-  });
-  renderQuestions(filtered);
-}
+// Charger au démarrage
+loadData();
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
