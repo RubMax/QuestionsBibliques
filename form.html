@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Saisie Questions & Réponses</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container py-4">
+  <h2 class="text-center mb-4">Formulaire Questions & Réponses</h2>
+
+  <form id="qaForm" class="card p-4 shadow-sm">
+
+    <div class="mb-3">
+      <label class="form-label">Sujet</label>
+      <input type="text" class="form-control" name="sujet" required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Tags (séparés par des virgules)</label>
+      <input type="text" class="form-control" name="tags" required>
+    </div>
+
+    <!-- Questions + Réponses -->
+    <div class="mb-3">
+      <label class="form-label">Question 01</label>
+      <input type="text" class="form-control" name="question01">
+      <textarea class="form-control mt-2" name="reponse01" rows="2" placeholder="Réponse 01"></textarea>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Question 02</label>
+      <input type="text" class="form-control" name="question02">
+      <textarea class="form-control mt-2" name="reponse02" rows="2" placeholder="Réponse 02"></textarea>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Question 03</label>
+      <input type="text" class="form-control" name="question03">
+      <textarea class="form-control mt-2" name="reponse03" rows="2" placeholder="Réponse 03"></textarea>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Question 04</label>
+      <input type="text" class="form-control" name="question04">
+      <textarea class="form-control mt-2" name="reponse04" rows="2" placeholder="Réponse 04"></textarea>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Question 05</label>
+      <input type="text" class="form-control" name="question05">
+      <textarea class="form-control mt-2" name="reponse05" rows="2" placeholder="Réponse 05"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100">Enregistrer</button>
+    <div id="message" class="mt-3"></div>
+  </form>
+</div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw16vU3oy-YzhDFFAOmTzjdD4w4gdOLn3uS7C6mophbCZUkP93EYtqh96bXIrw8Hweq/exec"; // colle ton URL ici
+
+document.getElementById("qaForm").addEventListener("submit", async function(e){
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  let data = {};
+  formData.forEach((value, key) => data[key] = value);
+
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+    const result = await res.json();
+
+    if(result.status === "success") {
+      document.getElementById("message").innerHTML = `<div class="alert alert-success">Enregistrement réussi ✅</div>`;
+      this.reset();
+    } else {
+      document.getElementById("message").innerHTML = `<div class="alert alert-danger">Erreur: ${result.message}</div>`;
+    }
+  } catch (err) {
+    document.getElementById("message").innerHTML = `<div class="alert alert-danger">Erreur réseau: ${err}</div>`;
+  }
+});
+</script>
+
+</body>
+</html>
