@@ -9,7 +9,12 @@
 <body class="bg-light">
 
 <div class="container py-4">
-  <h2 class="text-center mb-4">Formulaire Questions & Réponses</h2>
+  <h2 class="text-center mb-2">Formulaire Questions & Réponses</h2>
+
+  <!-- Bouton Retour -->
+  <div class="mb-3 text-center">
+    <a href="index.html" class="btn btn-secondary">⬅ Retour à l'index</a>
+  </div>
 
   <form id="qaForm" class="card p-4 shadow-sm">
 
@@ -60,7 +65,7 @@
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw16vU3oy-YzhDFFAOmTzjdD4w4gdOLn3uS7C6mophbCZUkP93EYtqh96bXIrw8Hweq/exec"; // colle ton URL ici
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw16vU3oy-YzhDFFAOmTzjdD4w4gdOLn3uS7C6mophbCZUkP93EYtqh96bXIrw8Hweq/exec"; 
 
 document.getElementById("qaForm").addEventListener("submit", async function(e){
   e.preventDefault();
