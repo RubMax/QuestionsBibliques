@@ -23,28 +23,6 @@
       border-radius: 5px;
       white-space: pre-line;
     }
-
-    .qa-block {
-  background: #f8f9fa;
-  border-left: 3px solid #0d6efd;
-  padding: 15px;
-  margin-bottom: 10px;
-  border-radius: 5px;
-  /* Support de tous les caractères et retours à la ligne */
-  white-space: pre-wrap;      /* Respecte les sauts de ligne */
-  word-wrap: break-word;      /* Casse les mots trop longs */
-  word-break: break-all;      /* Sécurité supplémentaire pour les URLs/symboles */
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-/* Style spécifique pour le code ou les caractères techniques */
-.qa-block p:nth-child(2) {
-    background: #ffffff;
-    border: 1px solid #dee2e6;
-    padding: 8px;
-    display: block;
-}
-
   </style>
 </head>
 <body class="bg-light">
@@ -213,40 +191,11 @@ document.getElementById("addBtn").addEventListener("click", function(){
 
 // Charger au démarrage
 loadData();
-
-  function renderQA(entries) {
-  let html = "";
-  entries.forEach(row => {
-    for (let i = 1; i <= 5; i++) {
-      const q = row[`question0${i}`];
-      const r = row[`reponse0${i}`];
-      if (q) {
-        // Création d'éléments temporaires pour sécuriser l'affichage des caractères spéciaux
-        const divQ = document.createElement('div');
-        divQ.textContent = q;
-        const divR = document.createElement('div');
-        divR.textContent = r || "";
-
-        html += `
-          <div class="qa-block">
-            <p class="fw-bold mb-1 text-primary">Q: ${divQ.innerHTML}</p>
-            <p class="mb-0 text-dark" style="font-family: 'Courier New', monospace; background: #eee; padding: 5px; border-radius: 3px;">
-                ${divR.innerHTML}
-            </p>
-          </div>
-        `;
-      }
-    }
-  });
-  return html;
-}
-
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-
 
 
 
